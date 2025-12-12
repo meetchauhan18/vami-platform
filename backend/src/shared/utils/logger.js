@@ -1,12 +1,64 @@
 import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
 import config from '../config/index.js';
+import {
+  getCorrelationId,
+  getUserId,
+} from '../middleware/correlation-id.middleware.js';
+
+/**
+ * Custom format to inject correlation ID and user ID
+ */
+const correlationFormat = winston.format(info => {
+  info.correlationId = getCorrelationId();
+  const userId = getUserId();
+  if (userId) {
+    info.userId = userId;
+  }
+  return info;
+});
 
 // Define log format
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
   winston.format.splat(),
+  correlationFormat(),
   winston.format.json()
+);
+
+// Console format (human-readable for development)
+const consoleFormat = winston.format.combine(
+  winston.format.colorize(),
+  winston.format.printf(
+    ({
+      timestamp,
+      level,
+      message,
+      service,
+      correlationId,
+      userId,
+      ...meta
+    }) => {
+      let msg = `${timestamp} [${service}] ${level}: ${message}`;
+
+      if (correlationId && correlationId !== 'unknown') {
+        msg += ` [${correlationId}]`;
+      }
+
+      if (userId) {
+        msg += ` [user:${userId}]`;
+      }
+
+      // Add metadata if exists
+      const metaKeys = Object.keys(meta);
+      if (metaKeys.length > 0) {
+        msg += ` ${JSON.stringify(meta)}`;
+      }
+
+      return msg;
+    }
+  )
 );
 
 // Create logger instance
@@ -15,36 +67,41 @@ const logger = winston.createLogger({
   format: logFormat,
   defaultMeta: { service: 'vami-backend' },
   transports: [
-    // Write all logs to console
+    // Console transport
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(
-          ({ timestamp, level, message, service, ...meta }) => {
-            let msg = `${timestamp} [${service}] ${level}: ${message}`;
-
-            // Add metadata if exists
-            if (Object.keys(meta).length > 0) {
-              msg += ` ${JSON.stringify(meta)}`;
-            }
-
-            return msg;
-          }
-        )
-      ),
+      format: config.env === 'production' ? logFormat : consoleFormat,
     }),
 
-    // Write errors to file (production only)
+    // File transports for production
     ...(config.env === 'production'
       ? [
-          new winston.transports.File({
-            filename: 'logs/error.log',
+          // Error logs with daily rotation
+          new DailyRotateFile({
+            filename: 'logs/error-%DATE%.log',
+            datePattern: 'YYYY-MM-DD',
             level: 'error',
+            maxSize: '20m',
+            maxFiles: '14d',
+            format: logFormat,
           }),
-          new winston.transports.File({ filename: 'logs/combined.log' }),
+          // Combined logs with daily rotation
+          new DailyRotateFile({
+            filename: 'logs/combined-%DATE%.log',
+            datePattern: 'YYYY-MM-DD',
+            maxSize: '20m',
+            maxFiles: '14d',
+            format: logFormat,
+          }),
         ]
       : []),
   ],
 });
+
+/**
+ * Stream for Morgan HTTP logging
+ */
+logger.stream = {
+  write: message => logger.info(message.trim()),
+};
 
 export default logger;

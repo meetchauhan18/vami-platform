@@ -1,26 +1,10 @@
 import responseUtils from '../../shared/utils/response.js';
 import asyncHandler from '../../shared/utils/asyncHandler.js';
 import userService from './user.service.js';
+import { sanitizeUser } from '../../shared/utils/user.sanitizer.js';
 
 const { successResponse } = responseUtils;
 const { getUserById, updateUserProfile } = userService;
-
-const sanitizeUser = user => ({
-  id: user._id,
-  email: user.email,
-  username: user.username,
-  profile: {
-    firstName: user.profile?.firstName || null,
-    lastName: user.profile?.lastName || null,
-    avatarUrl: user.profile?.avatarUrl || null,
-    bio: user.profile?.bio || null,
-  },
-  stats: user.stats,
-  role: user.role,
-  status: user.status,
-  createdAt: user.createdAt,
-  updatedAt: user.updatedAt,
-});
 
 /**
  * GET /users/me

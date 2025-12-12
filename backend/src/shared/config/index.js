@@ -6,6 +6,9 @@ const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 5000,
 
+  // Client URL (for CORS)
+  clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
+
   // Database
   database: {
     uri: process.env.MONGODB_URI,
@@ -18,6 +21,7 @@ const config = {
     refreshSecret: process.env.JWT_REFRESH_SECRET,
     accessExpiry: process.env.JWT_ACCESS_EXPIRY || '24h',
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
+    refreshExpiryMs: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
   },
 
   // Security
@@ -30,6 +34,14 @@ const config = {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 60000,
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 100,
   },
+
+  // Redis
+  redis: {
+    host: process.env.REDIS_HOST || '127.0.0.1',
+    port: parseInt(process.env.REDIS_PORT, 10) || 6379,
+    password: process.env.REDIS_PASSWORD,
+    db: parseInt(process.env.REDIS_DB, 10) || 0,
+  },
 };
 
 /**
@@ -38,12 +50,19 @@ const config = {
 const validateConfig = () => {
   const required = ['MONGODB_URI', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
 
-  const missing = required?.filter(key => !process.env[key]);
+  const missing = required.filter(key => !process.env[key]);
 
-  if (missing?.length > 0) {
+  if (missing.length > 0) {
     throw new Error(
       `Missing required environment variables: ${missing.join(', ')}\n` +
         'Please check your .env file'
+    );
+  }
+
+  // Strict CORS validation in production
+  if (config.env === 'production' && !process.env.CLIENT_URL) {
+    throw new Error(
+      'CLIENT_URL must be set in production environment for CORS security'
     );
   }
 };

@@ -1,7 +1,8 @@
 import app from './app.js';
 import config from './shared/config/index.js';
 import logger from './shared/utils/logger.js';
-import { connectDatabase, closeDatabase } from './shared/config/database.js';  
+import { connectDatabase, closeDatabase } from './shared/config/database.js';
+import { closeRedis } from './shared/config/redis.js';
 
 /**
  * Start the server
@@ -29,6 +30,9 @@ const startServer = async () => {
 
         // Close database connection
         await closeDatabase();
+
+        // Close Redis connection
+        await closeRedis();
 
         logger.info('Graceful shutdown complete');
         process.exit(0);

@@ -2,27 +2,19 @@ import responseUtils from '../../shared/utils/response.js';
 import asyncHandler from '../../shared/utils/asyncHandler.js';
 import authService from './auth.service.js';
 import tokenService from './token.service.js';
+import { sanitizeUser } from '../../shared/utils/user.sanitizer.js';
+import config from '../../shared/config/index.js';
 
 const { successResponse } = responseUtils;
-const { registerUser, loginUser } = authService;
+const { registerUser, loginUser, logoutUser } = authService;
 const { refreshTokens } = tokenService;
 
-const sanitizeUser = user => ({
-  id: user._id,
-  email: user.email,
-  username: user.username,
-  profile: {
-    firstName: user.profile?.firstName || null,
-    lastName: user.profile?.lastName || null,
-    avatarUrl: user.profile?.avatarUrl || null,
-    bio: user.profile?.bio || null,
-  },
-  stats: user.stats,
-  role: user.role,
-  status: user.status,
-  createdAt: user.createdAt,
-  updatedAt: user.updatedAt,
-});
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: config?.env === 'production',
+  sameSite: 'strict',
+    maxAge: config?.jwt?.refreshExpiryMs,
+};
 
 /**
  * POST /auth/register
@@ -30,13 +22,8 @@ const sanitizeUser = user => ({
 const registerController = asyncHandler(async (req, res) => {
   const { user, accessToken, refreshToken } = await registerUser(req.body);
 
-  // Set refresh token as httpOnly cookie (better for security)
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
+  // Set refresh token as httpOnly cookie
+  res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS);
 
   return successResponse(
     res,
@@ -104,8 +91,27 @@ const refreshController = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * POST /auth/logout
+ */
+const logoutController = asyncHandler(async (req, res) => {
+  const tokenFromCookie = req.cookies?.refreshToken;
+  const tokenFromBody = req.body?.refreshToken;
+  const refreshToken = tokenFromCookie || tokenFromBody;
+
+  await logoutUser(refreshToken);
+
+  // Clear cookie
+  res.clearCookie('refreshToken');
+
+  return successResponse(res, {
+    message: 'Logged out successfully',
+  });
+});
+
 export default {
   registerController,
   loginController,
   refreshController,
+  logoutController,
 };
