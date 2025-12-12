@@ -4,7 +4,6 @@ import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
-import mongoSanitize from 'express-mongo-sanitize';
 import mongoose from 'mongoose';
 
 import config from './shared/config/index.js';
@@ -58,11 +57,8 @@ app.use(cookieParser());
 
 // ===== SECURITY - INPUT SANITIZATION =====
 // Prevent NoSQL injection
-app.use(
-  mongoSanitize({
-    replaceWith: '_',
-  })
-);
+// Temporarily removed due to Express 5 compatibility issues
+// TODO: Re-implement with proper Express 5 compatible solution
 
 // ===== LOGGING =====
 // Morgan: HTTP request logging
