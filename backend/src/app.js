@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import config from './shared/config/index.js';
 import logger from './shared/utils/logger.js';
+import errorMiddleware from './shared/middleware/error.middleware.js';
+import authRoutes from './modules/auth/auth.routes.js';
 
 const app = express();
 
@@ -13,10 +15,12 @@ const app = express();
 app.use(helmet());
 
 // CORS: Allow cross-origin requests (configure for production)
-app.use(cors({
-  origin: config?.clientUrl || '*', // Change in production
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: config?.clientUrl || '*', // Change in production
+    credentials: true,
+  })
+);
 
 // ===== REQUEST PARSING =====
 // Parse JSON bodies (limit: 10mb for media uploads)
@@ -28,11 +32,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // ===== LOGGING =====
 // Morgan: HTTP request logging
 const morganFormat = config?.env === 'production' ? 'combined' : 'dev';
-app.use(morgan(morganFormat, {
-  stream: {
-    write: message => logger?.info(message.trim()),
-  },
-}));
+app.use(
+  morgan(morganFormat, {
+    stream: {
+      write: message => logger?.info(message.trim()),
+    },
+  })
+);
 
 // ===== RATE LIMITING =====
 const limiter = rateLimit({
@@ -67,8 +73,7 @@ app.get('/health', (req, res) => {
 });
 
 // ===== API ROUTES =====
-// TODO: Add route handlers here
-// app.use('/api/v1/auth', require('./modules/auth/auth.routes'));
+app.use('/api/v1/auth', authRoutes);
 
 // ===== 404 HANDLER =====
 app.use((req, res) => {
@@ -83,6 +88,6 @@ app.use((req, res) => {
 });
 
 // ===== ERROR HANDLER =====
-// TODO: Add centralized error middleware
+app.use(errorMiddleware);
 
 export default app;
