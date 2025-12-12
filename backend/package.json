@@ -11,11 +11,16 @@
     "format": "prettier --write \"src/**/*.js\""
   },
   "type": "module",
-  "keywords": ["vami", "api", "backend"],
+  "keywords": [
+    "vami",
+    "api",
+    "backend"
+  ],
   "author": "Meet Chauhan",
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",

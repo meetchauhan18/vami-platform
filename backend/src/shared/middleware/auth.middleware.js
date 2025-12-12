@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
-import config from '../config.js';
-import { errorResponse } from '../utils/response.js';
+import config from '../config/index.js';
+import responseUtils from '../utils/response.js';
+
+const { errorResponse } = responseUtils;
 
 /**
  * Verifies JWT access token and attaches user info to req.user

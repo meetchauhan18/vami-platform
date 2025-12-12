@@ -2,11 +2,13 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import config from './shared/config/index.js';
 import logger from './shared/utils/logger.js';
 import errorMiddleware from './shared/middleware/error.middleware.js';
 import authRoutes from './modules/auth/auth.routes.js';
+import userRoutes from './modules/users/user.routes.js';
 
 const app = express();
 
@@ -28,6 +30,9 @@ app.use(express.json({ limit: '10mb' }));
 
 // Parse URL-encoded bodies
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Parse cookies (required for refresh token in httpOnly cookies)
+app.use(cookieParser());
 
 // ===== LOGGING =====
 // Morgan: HTTP request logging
@@ -74,6 +79,7 @@ app.get('/health', (req, res) => {
 
 // ===== API ROUTES =====
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
 
 // ===== 404 HANDLER =====
 app.use((req, res) => {
